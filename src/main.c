@@ -1,10 +1,3 @@
-/* main.c - Application main entry point */
-
-/*
- * Copyright (c) 2015-2016 Intel Corporation
- *
- * SPDX-License-Identifier: Apache-2.0
- */
 
 #include <zephyr/types.h>
 #include <stddef.h>
@@ -31,18 +24,201 @@
 #include <stdio.h>
 #include <sys/util.h>
 
-/* Custom Service Variables */
-static struct bt_uuid_128 vnd_uuid = BT_UUID_INIT_128(
-	0xf0, 0xde, 0xbc, 0x9a, 0x78, 0x56, 0x34, 0x12,
-	0x78, 0x56, 0x34, 0x12, 0x78, 0x56, 0x34, 0x12);
+static uint16_t environmental_handle;
+static uint16_t acc_gyro_mag_handle;
+static uint16_t acceleration_event_handle;
+static uint16_t mic_level_handle;
+static uint16_t battery_handle;
+static uint16_t mems_sensor_fusion_compact_handle;
+static uint16_t compass_handle;
+static uint16_t activity_handle;
+static uint16_t carry_position_handle;
+static uint16_t mems_gesture_handle;
+uint16_t audio_source_localization_handle;
+uint16_t beam_forming_handle;
+static uint16_t sd_logging_handle;
+static uint16_t feature_command_handle;
+static uint16_t debug_term_handle;
+static uint16_t debug_stderr_handle;
+static uint16_t audio_ADPCM_handle;
+static uint16_t audio_ADPCM_Sync_handle;
 
-static struct bt_uuid_128 vnd_enc_uuid = BT_UUID_INIT_128(
-	0xf1, 0xde, 0xbc, 0x9a, 0x78, 0x56, 0x34, 0x12,
-	0x78, 0x56, 0x34, 0x12, 0x78, 0x56, 0x34, 0x12);
+/*
+** Feature services
+*/
+static struct bt_uuid_128 feature_service_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0xb4, 0x9a,
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00);
 
-static struct bt_uuid_128 vnd_auth_uuid = BT_UUID_INIT_128(
-	0xf2, 0xde, 0xbc, 0x9a, 0x78, 0x56, 0x34, 0x12,
-	0x78, 0x56, 0x34, 0x12, 0x78, 0x56, 0x34, 0x12);
+/* Base feature */
+
+static struct bt_uuid_128 environmental_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00);
+
+static struct bt_uuid_128 acc_gyro_mag_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0xE0, 0x00);
+
+static struct bt_uuid_128 audio_ADPCM_Sync_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0x00, 0x40);
+
+static struct bt_uuid_128 switch_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0x00, 0x20);
+
+static struct bt_uuid_128 audio_source_localization_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0x00, 0x10);
+
+
+static struct bt_uuid_128 audio_ADPCM_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0x00, 0x08);
+
+static struct bt_uuid_128 mic_level_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0x00, 0x04);
+
+static struct bt_uuid_128 proximity_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0x00, 0x02);
+
+static struct bt_uuid_128 luminosity_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0x00, 0x01);
+
+
+static struct bt_uuid_128 acceleration_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0x80, 0x00);
+
+static struct bt_uuid_128 gyroscope_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0x40, 0x00);
+
+static struct bt_uuid_128 magnetometer_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0x20, 0x00);
+
+static struct bt_uuid_128 pressure_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0x10, 0x00);
+
+
+static struct bt_uuid_128 humidity_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0x08, 0x00);
+
+static struct bt_uuid_128 temperature_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0x04, 0x00);
+
+static struct bt_uuid_128 battery_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00);
+
+static struct bt_uuid_128 temperature_bis_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00);
+
+
+static struct bt_uuid_128 co_sensor_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x80, 0x00, 0x00);
+
+static struct bt_uuid_128 sd_logging_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x10, 0x00, 0x00);
+
+
+static struct bt_uuid_128 beam_forming_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x08, 0x00, 0x00);
+
+static struct bt_uuid_128 acceleration_event_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x04, 0x00, 0x00);
+
+static struct bt_uuid_128 free_fall_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x02, 0x00, 0x00);
+
+static struct bt_uuid_128 mems_sensor_fusion_compact_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00);
+
+
+static struct bt_uuid_128 mems_sensor_fusion_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x80, 0x00, 0x00, 0x00);
+
+static struct bt_uuid_128 compass_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x40, 0x00, 0x00, 0x00);
+
+static struct bt_uuid_128 motion_intensity_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x20, 0x00, 0x00, 0x00);
+
+static struct bt_uuid_128 activity_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x10, 0x00, 0x00, 0x00);
+
+
+static struct bt_uuid_128 carry_position_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x08, 0x00, 0x00, 0x00);
+
+static struct bt_uuid_128 proximity_gesture_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x04, 0x00, 0x00, 0x00);
+
+static struct bt_uuid_128 mems_gesture_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x02, 0x00, 0x00, 0x00);
+
+static struct bt_uuid_128 pedometer_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x01, 0x00, 0x10, 0x00, 0x00, 0x00);
+
+
+/*
+** Debug service
+*/
+static struct bt_uuid_128 debug_service_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0xb4, 0x9a,
+	0xe1, 0x11, 0x0e, 0x00, 0x00, 0x00, 0x00, 0x00);
+
+/* Read and write outpout commands characteristic */
+static struct bt_uuid_128 debug_term_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x0e, 0x00, 0x01, 0x00, 0x00, 0x00);
+
+/* Error message characteristic */
+static struct bt_uuid_128 debug_stderr_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x0e, 0x00, 0x02, 0x00, 0x00, 0x00);
+
+/*
+** Common config control service
+*/
+static struct bt_uuid_128 config_control_service_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0xb4, 0x9a,
+	0xe1, 0x11, 0x0f, 0x00, 0x00, 0x00, 0x00, 0x00);
+
+/* Manage register characteristic */
+static struct bt_uuid_128 register_access_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x0f, 0x00, 0x01, 0x00, 0x00, 0x00);
+
+/* send command to feature characteristc */
+static struct bt_uuid_128 feature_command_uuid = BT_UUID_INIT_128(
+	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+	0xe1, 0x11, 0x0f, 0x00, 0x02, 0x00, 0x00, 0x00);
+
+
 
 static u8_t vnd_value[] = { 'V', 'e', 'n', 'd', 'o', 'r' };
 
@@ -126,10 +302,6 @@ static ssize_t write_long_vnd(struct bt_conn *conn,
 	return len;
 }
 
-static const struct bt_uuid_128 vnd_long_uuid = BT_UUID_INIT_128(
-	0xf3, 0xde, 0xbc, 0x9a, 0x78, 0x56, 0x34, 0x12,
-	0x78, 0x56, 0x34, 0x12, 0x78, 0x56, 0x34, 0x12);
-
 static struct bt_gatt_cep vnd_long_cep = {
 	.properties = BT_GATT_CEP_RELIABLE_WRITE,
 };
@@ -160,14 +332,6 @@ static ssize_t write_signed(struct bt_conn *conn, const struct bt_gatt_attr *att
 	return len;
 }
 
-static const struct bt_uuid_128 vnd_signed_uuid = BT_UUID_INIT_128(
-	0xf3, 0xde, 0xbc, 0x9a, 0x78, 0x56, 0x34, 0x13,
-	0x78, 0x56, 0x34, 0x12, 0x78, 0x56, 0x34, 0x13);
-
-static const struct bt_uuid_128 vnd_write_cmd_uuid = BT_UUID_INIT_128(
-	0xf4, 0xde, 0xbc, 0x9a, 0x78, 0x56, 0x34, 0x12,
-	0x78, 0x56, 0x34, 0x12, 0x78, 0x56, 0x34, 0x12);
-
 static ssize_t write_without_rsp_vnd(struct bt_conn *conn,
 				     const struct bt_gatt_attr *attr,
 				     const void *buf, u16_t len, u16_t offset,
@@ -193,42 +357,193 @@ static ssize_t write_without_rsp_vnd(struct bt_conn *conn,
 
 /* Vendor Primary Service Declaration */
 BT_GATT_SERVICE_DEFINE(vnd_svc,
-	BT_GATT_PRIMARY_SERVICE(&vnd_uuid),
-	BT_GATT_CHARACTERISTIC(&vnd_enc_uuid.uuid,
-			       BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE |
-			       BT_GATT_CHRC_INDICATE,
-			       BT_GATT_PERM_READ_ENCRYPT |
-			       BT_GATT_PERM_WRITE_ENCRYPT,
-			       read_vnd, write_vnd, vnd_value),
-	BT_GATT_CCC(vnd_ccc_cfg, vnd_ccc_cfg_changed),
-	BT_GATT_CHARACTERISTIC(&vnd_auth_uuid.uuid,
-			       BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE,
-			       BT_GATT_PERM_READ_AUTHEN |
-			       BT_GATT_PERM_WRITE_AUTHEN,
-			       read_vnd, write_vnd, vnd_value),
-	BT_GATT_CHARACTERISTIC(&vnd_long_uuid.uuid, BT_GATT_CHRC_READ |
-			       BT_GATT_CHRC_WRITE | BT_GATT_CHRC_EXT_PROP,
-			       BT_GATT_PERM_READ | BT_GATT_PERM_WRITE |
-			       BT_GATT_PERM_PREPARE_WRITE,
-			       read_long_vnd, write_long_vnd, &vnd_long_value),
-	BT_GATT_CEP(&vnd_long_cep),
-	BT_GATT_CHARACTERISTIC(&vnd_signed_uuid.uuid, BT_GATT_CHRC_READ |
-			       BT_GATT_CHRC_WRITE | BT_GATT_CHRC_AUTH,
-			       BT_GATT_PERM_READ | BT_GATT_PERM_WRITE,
-			       read_signed, write_signed, &signed_value),
-	BT_GATT_CHARACTERISTIC(&vnd_write_cmd_uuid.uuid,
-			       BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+	BT_GATT_PRIMARY_SERVICE(&feature_service_uuid),
+
+	BT_GATT_CHARACTERISTIC(&environmental_uuid.uuid,
+						 BT_GATT_CHRC_NOTIFY | BT_GATT_CHRC_READ,
+						 BT_GATT_PERM_NONE,
+						 NULL, write_without_rsp_vnd,
+						 &environmental_handle),
+
+  BT_GATT_CHARACTERISTIC(&acc_gyro_mag_uuid.uuid,
+						 BT_GATT_CHRC_NOTIFY, BT_GATT_CHRC_NOTIFY,
+						 NULL, write_without_rsp_vnd
+						 &acc_gyro_mag_handle),
+
+	BT_GATT_CHARACTERISTIC(&audio_ADPCM_Sync_uuid.uuid,
+						 BT_GATT_CHRC_NOTIFY,
+						 BT_GATT_PERM_NONE,
+						 NULL, write_without_rsp_vnd,
+						 &audio_ADPCM_Sync_handle),
+	/*BT_GATT_CHARACTERISTIC(&switch_uuid.uuid,
+						 BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+						 BT_GATT_PERM_WRITE, NULL,
+						 write_without_rsp_vnd, &vnd_value),*/
+  BT_GATT_CHARACTERISTIC(&audio_source_localization_uuid.uuid,
+						 BT_GATT_CHRC_NOTIFY, BT_GATT_PERM_NONE,
+						 NULL, write_without_rsp_vnd,
+						 &audio_source_localization_handle),
+
+	BT_GATT_CHARACTERISTIC(&audio_ADPCM_uuid.uuid,
+						 BT_GATT_CHRC_NOTIFY,
+						 BT_GATT_PERM_NONE,
+						 NULL, write_without_rsp_vnd,
+			       &audio_ADPCM_handle),
+  BT_GATT_CHARACTERISTIC(&mic_level_uuid.uuid,
+						 BT_GATT_CHRC_NOTIFY, BT_GATT_PERM_NONE,
+						 NULL, write_without_rsp_vnd,
+					 	 &mic_level_handle),
+  /*BT_GATT_CHARACTERISTIC(&proximity_uuid.uuid,
+						 BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+						 BT_GATT_PERM_WRITE, NULL,
+						 write_without_rsp_vnd, &vnd_value),
+  BT_GATT_CHARACTERISTIC(&luminosity_uuid.uuid,
+						 BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+						 BT_GATT_PERM_WRITE, NULL,
+						 write_without_rsp_vnd, &vnd_value),
+
+  BT_GATT_CHARACTERISTIC(&acceleration_uuid.uuid,
+						 BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+						 BT_GATT_PERM_WRITE, NULL,
+						 write_without_rsp_vnd, &vnd_value),
+  BT_GATT_CHARACTERISTIC(&gyroscope_uuid.uuid,
+						 BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+						 BT_GATT_PERM_WRITE, NULL,
+						 write_without_rsp_vnd, &vnd_value),
+  BT_GATT_CHARACTERISTIC(&magnetometer_uuid.uuid,
+						 BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+						 BT_GATT_PERM_WRITE, NULL,
+						 write_without_rsp_vnd, &vnd_value),
+  BT_GATT_CHARACTERISTIC(&pressure_uuid.uuid,
+						 BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+						 BT_GATT_PERM_WRITE, NULL,
+						 write_without_rsp_vnd, &vnd_value),
+
+  BT_GATT_CHARACTERISTIC(&humidity_uuid.uuid,
+						 BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+						 BT_GATT_PERM_WRITE, NULL,
+						 write_without_rsp_vnd, &vnd_value),
+  BT_GATT_CHARACTERISTIC(&temperature_uuid.uuid,
+						 BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+						 BT_GATT_PERM_WRITE, NULL,
+						 write_without_rsp_vnd, &vnd_value),*/
+  BT_GATT_CHARACTERISTIC(&battery_uuid.uuid,
+						 BT_GATT_CHRC_NOTIFY | BT_GATT_CHRC_READ,
+						 BT_GATT_PERM_NONE,
+						 NULL, write_without_rsp_vnd,
+						 &battery_handle),
+  /*BT_GATT_CHARACTERISTIC(&temperature_bis_uuid.uuid,
+						 BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+						 BT_GATT_PERM_WRITE, NULL,
+						 write_without_rsp_vnd, &vnd_value),
+
+  BT_GATT_CHARACTERISTIC(&co_sensor_uuid.uuid,
+						 BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+						 BT_GATT_PERM_WRITE, NULL,
+						 write_without_rsp_vnd, &vnd_value),*/
+  BT_GATT_CHARACTERISTIC(&sd_logging_uuid.uuid,
+						 BT_GATT_CHRC_NOTIFY | BT_GATT_CHRC_WRITE |
+						 BT_GATT_CHRC_READ,
+						 BT_GATT_PERM_NONE,
+						 NULL, write_without_rsp_vnd,
+						 &sd_logging_handle),
+
+  BT_GATT_CHARACTERISTIC(&beam_forming_uuid.uuid,
+						 BT_GATT_CHRC_NOTIFY,
+						 BT_GATT_PERM_NONE,
+						 NULL, write_without_rsp_vnd
+						 &beam_forming_handle),
+  BT_GATT_CHARACTERISTIC(&acceleration_event_uuid.uuid,
+						 BT_GATT_CHRC_NOTIFY | BT_GATT_CHRC_READ,
+						 BT_GATT_PERM_NONE,
+						 NULL, write_without_rsp_vnd,
+						 &acceleration_event_handle),
+  /*BT_GATT_CHARACTERISTIC(&free_fall_uuid.uuid,
+						 BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+						 BT_GATT_PERM_WRITE, NULL,
+						 write_without_rsp_vnd, &vnd_value),*/
+  BT_GATT_CHARACTERISTIC(&mems_sensor_fusion_compact_uuid.uuid,
+						 BT_GATT_CHRC_NOTIFY,
+						 BT_GATT_PERM_NONE,
+						 NULL, write_without_rsp_vnd,
+						 &mems_sensor_fusion_compact_handle),
+
+  /*BT_GATT_CHARACTERISTIC(&mems_sensor_fusion_uuid.uuid,
+						 BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+						 BT_GATT_PERM_WRITE, NULL,
+						 write_without_rsp_vnd, &vnd_value),*/
+  BT_GATT_CHARACTERISTIC(&compass_uuid.uuid,
+						 BT_GATT_CHRC_NOTIFY,
+						 BT_GATT_PERM_NONE,
+						 NULL, write_without_rsp_vnd,
+						 &compass_handle),
+  /*BT_GATT_CHARACTERISTIC(&motion_intensity_uuid.uuid,
+						 BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+						 BT_GATT_PERM_WRITE, NULL,
+						 write_without_rsp_vnd, &vnd_value),*/
+  BT_GATT_CHARACTERISTIC(&activity_uuid.uuid,
+						 BT_GATT_CHRC_NOTIFY | BT_GATT_CHRC_READ,
+						 BT_GATT_PERM_NONE,
+						 NULL, write_without_rsp_vnd,
+						 &activity_handle),
+
+  BT_GATT_CHARACTERISTIC(&carry_position_uuid.uuid,
+						 BT_GATT_CHRC_NOTIFY | BT_GATT_CHRC_READ,
+						 BT_GATT_PERM_NONE,
+						 NULL, write_without_rsp_vnd,
+						 &carry_position_handle),
+  /*BT_GATT_CHARACTERISTIC(&proximity_gesture_uuid.uuid,
+						 BT_GATT_CHRC_WRITE_WITHOUT_RESP,
 			       BT_GATT_PERM_WRITE, NULL,
 			       write_without_rsp_vnd, &vnd_value),
+  BT_GATT_CHARACTERISTIC(&mems_gesture_uuid.uuid,
+						 BT_GATT_CHRC_NOTIFY | BT_GATT_CHRC_READ,
+						 BT_GATT_PERM_NONE,
+						 NULL,
+						 &mems_gesture_handle),
+  BT_GATT_CHARACTERISTIC(&pedometer_uuid.uuid,
+						 BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+			       BT_GATT_PERM_WRITE, NULL,
+			       write_without_rsp_vnd, &vnd_value), */
+
+
+ BT_GATT_PRIMARY_SERVICE(&debug_service_uuid),
+ BT_GATT_CHARACTERISTIC(&debug_term_uuid.uuid,
+	           BT_GATT_CHRC_NOTIFY | BT_GATT_CHRC_WRITE_WITHOUT_RESP |
+						 BT_GATT_CHRC_WRITE | BT_GATT_CHRC_READ,
+						 BT_GATT_PERM_NONE, NULL,
+						 write_without_rsp_vnd,
+						 &debug_term_handle),
+ BT_GATT_CHARACTERISTIC(&debug_stderr_uuid.uuid,
+						 BT_GATT_CHRC_NOTIFY | BT_GATT_CHRC_READ,
+						 BT_GATT_PERM_NONE,
+						 NULL, write_without_rsp_vnd,
+						 &debug_stderr_handle),
+
+
+ BT_GATT_PRIMARY_SERVICE(&config_control_service_uuid),
+ /*BT_GATT_CHARACTERISTIC(&register_access_uuid.uuid,
+						 BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE |
+						 BT_GATT_CHRC_INDICATE,
+						 BT_GATT_PERM_READ_ENCRYPT |
+						 BT_GATT_PERM_WRITE_ENCRYPT,
+						 read_vnd, write_vnd, vnd_value), */
+ BT_GATT_CHARACTERISTIC(&feature_command_uuid.uuid,
+						 BT_GATT_CHRC_NOTIFY | BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+						 BT_GATT_PERM_NONE, NULL,
+						 write_without_rsp_vnd,
+						 &feature_command_handle),
+
 );
+
 
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
 	BT_DATA_BYTES(BT_DATA_UUID16_ALL,
-		      0x0d, 0x18, 0x0f, 0x18, 0x05, 0x18),
+					0x01, 0x18, 0x00, 0x18, 0x05, 0x18),
 	BT_DATA_BYTES(BT_DATA_UUID128_ALL,
-		      0xf0, 0xde, 0xbc, 0x9a, 0x78, 0x56, 0x34, 0x12,
-		      0x78, 0x56, 0x34, 0x12, 0x78, 0x56, 0x34, 0x12),
+		      0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
+		      0xe1, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00),
 };
 
 static void connected(struct bt_conn *conn, u8_t err)
@@ -249,6 +564,7 @@ static struct bt_conn_cb conn_callbacks = {
 	.connected = connected,
 	.disconnected = disconnected,
 };
+
 
 static void bt_ready(int err)
 {

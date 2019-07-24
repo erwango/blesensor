@@ -14,6 +14,7 @@ Requirements
 
 * A ST Board with BLE support
 * X-NUCLEO-IKS01A1/2 Shield
+* ST BLE Sensor Application (Playstore)
 
 
 Building and Running

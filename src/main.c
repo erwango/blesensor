@@ -24,6 +24,11 @@
 #include <stdio.h>
 #include <sys/util.h>
 
+#define DEVICE_NAME CONFIG_BT_DEVICE_NAME
+#define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
+
+static uint8_t manuf_data[] = {0x01, 0x80, 0x5C, 0xFD, 0x01, 0x5A,
+															 0xC0, 0x86, 0x50, 0x35, 0x31, 0x42};
 static uint16_t environmental_handle;
 static uint16_t acc_gyro_mag_handle;
 static uint16_t acceleration_event_handle;
@@ -42,6 +47,7 @@ static uint16_t debug_term_handle;
 static uint16_t debug_stderr_handle;
 static uint16_t audio_ADPCM_handle;
 static uint16_t audio_ADPCM_Sync_handle;
+
 
 /*
 ** Feature services
@@ -263,74 +269,6 @@ static void indicate_cb(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 	indicating = 0U;
 }
 
-#define MAX_DATA 74
-static u8_t vnd_long_value[] = {
-		  'V', 'e', 'n', 'd', 'o', 'r', ' ', 'd', 'a', 't', 'a', '1',
-		  'V', 'e', 'n', 'd', 'o', 'r', ' ', 'd', 'a', 't', 'a', '2',
-		  'V', 'e', 'n', 'd', 'o', 'r', ' ', 'd', 'a', 't', 'a', '3',
-		  'V', 'e', 'n', 'd', 'o', 'r', ' ', 'd', 'a', 't', 'a', '4',
-		  'V', 'e', 'n', 'd', 'o', 'r', ' ', 'd', 'a', 't', 'a', '5',
-		  'V', 'e', 'n', 'd', 'o', 'r', ' ', 'd', 'a', 't', 'a', '6',
-		  '.', ' ' };
-
-static ssize_t read_long_vnd(struct bt_conn *conn,
-			     const struct bt_gatt_attr *attr, void *buf,
-			     u16_t len, u16_t offset)
-{
-	const char *value = attr->user_data;
-
-	return bt_gatt_attr_read(conn, attr, buf, len, offset, value,
-				 sizeof(vnd_long_value));
-}
-
-static ssize_t write_long_vnd(struct bt_conn *conn,
-			      const struct bt_gatt_attr *attr, const void *buf,
-			      u16_t len, u16_t offset, u8_t flags)
-{
-	u8_t *value = attr->user_data;
-
-	if (flags & BT_GATT_WRITE_FLAG_PREPARE) {
-		return 0;
-	}
-
-	if (offset + len > sizeof(vnd_long_value)) {
-		return BT_GATT_ERR(BT_ATT_ERR_INVALID_OFFSET);
-	}
-
-	memcpy(value + offset, buf, len);
-
-	return len;
-}
-
-static struct bt_gatt_cep vnd_long_cep = {
-	.properties = BT_GATT_CEP_RELIABLE_WRITE,
-};
-
-static int signed_value;
-
-static ssize_t read_signed(struct bt_conn *conn, const struct bt_gatt_attr *attr,
-			   void *buf, u16_t len, u16_t offset)
-{
-	const char *value = attr->user_data;
-
-	return bt_gatt_attr_read(conn, attr, buf, len, offset, value,
-				 sizeof(signed_value));
-}
-
-static ssize_t write_signed(struct bt_conn *conn, const struct bt_gatt_attr *attr,
-			    const void *buf, u16_t len, u16_t offset,
-			    u8_t flags)
-{
-	u8_t *value = attr->user_data;
-
-	if (offset + len > sizeof(signed_value)) {
-		return BT_GATT_ERR(BT_ATT_ERR_INVALID_OFFSET);
-	}
-
-	memcpy(value + offset, buf, len);
-
-	return len;
-}
 
 static ssize_t write_without_rsp_vnd(struct bt_conn *conn,
 				     const struct bt_gatt_attr *attr,
@@ -365,9 +303,11 @@ BT_GATT_SERVICE_DEFINE(vnd_svc,
 						 NULL, write_without_rsp_vnd,
 						 &environmental_handle),
 
+	BT_GATT_CCC(vnd_ccc_cfg, vnd_ccc_cfg_changed),
+
   BT_GATT_CHARACTERISTIC(&acc_gyro_mag_uuid.uuid,
 						 BT_GATT_CHRC_NOTIFY, BT_GATT_CHRC_NOTIFY,
-						 NULL, write_without_rsp_vnd
+						 NULL, write_without_rsp_vnd,
 						 &acc_gyro_mag_handle),
 
 	BT_GATT_CHARACTERISTIC(&audio_ADPCM_Sync_uuid.uuid,
@@ -451,7 +391,7 @@ BT_GATT_SERVICE_DEFINE(vnd_svc,
   BT_GATT_CHARACTERISTIC(&beam_forming_uuid.uuid,
 						 BT_GATT_CHRC_NOTIFY,
 						 BT_GATT_PERM_NONE,
-						 NULL, write_without_rsp_vnd
+						 NULL, write_without_rsp_vnd,
 						 &beam_forming_handle),
   BT_GATT_CHARACTERISTIC(&acceleration_event_uuid.uuid,
 						 BT_GATT_CHRC_NOTIFY | BT_GATT_CHRC_READ,
@@ -539,11 +479,10 @@ BT_GATT_SERVICE_DEFINE(vnd_svc,
 
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
-	BT_DATA_BYTES(BT_DATA_UUID16_ALL,
-					0x01, 0x18, 0x00, 0x18, 0x05, 0x18),
-	BT_DATA_BYTES(BT_DATA_UUID128_ALL,
-		      0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
-		      0xe1, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00),
+	BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN),
+	BT_DATA_BYTES(BT_DATA_TX_POWER, 0x00),
+	//BT_DATA(BT_DATA_NAME_SHORTENED, DEVICE_NAME, DEVICE_NAME_LEN),
+	BT_DATA(BT_DATA_MANUFACTURER_DATA, manuf_data, 12),
 };
 
 static void connected(struct bt_conn *conn, u8_t err)
@@ -657,31 +596,6 @@ void main(void)
 	 */
 	while (1) {
 		k_sleep(MSEC_PER_SEC);
-
-		/* Current Time Service updates only when time is changed */
-		cts_notify();
-
-		/* Heartrate measurements simulation */
-		hrs_notify();
-
-		/* Battery level simulation */
-		bas_notify();
-
-		/* Vendor indication simulation */
-		if (simulate_vnd) {
-			if (indicating) {
-				continue;
-			}
-
-			ind_params.attr = &vnd_svc.attrs[2];
-			ind_params.func = indicate_cb;
-			ind_params.data = &indicating;
-			ind_params.len = sizeof(indicating);
-
-			if (bt_gatt_indicate(NULL, &ind_params) == 0) {
-				indicating = 1U;
-			}
-		}
 
 		/* Get sensor samples */
 

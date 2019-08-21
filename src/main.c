@@ -763,26 +763,20 @@ void main(void)
 	bt_conn_cb_register(&conn_callbacks);
 	bt_conn_auth_cb_register(&auth_cb_display);
 
+	init_quat();
+
 	/* Implement notification. At the moment there is no suitable way
 	 * of starting delayed work so we do it here
 	 */
 
 	while(1){
 
-		k_sleep(MSEC_PER_SEC);
-
 		env_indicate();
-		stderr_notify();
-		cmd_notify();
-		reg_notify();
-		bat_notify();
-		quat_notify();
-
-		k_sleep(1000);
+		quat_indicate();
+		comp_indicate();
+		//blvl_indicate();
 
 	}
 	//term_notify();
-
-
 
 }

@@ -7,14 +7,9 @@ project(blesensor)
 
 target_sources(app PRIVATE
   src/main.c
-  src/command.c
   src/environmental.c
-  src/register.c
-  src/stderr.c
-  src/terminal.c
-  src/battery.c
   src/quaternions.c
-  src/acc_gyro_mag.c
+  src/command.c
   /home/stuserlogin/stage/zephyrproject/zephyr/samples/bluetooth/gatt/hrs.c
   /home/stuserlogin/stage/zephyrproject/zephyr/samples/bluetooth/gatt/bas.c
   /home/stuserlogin/stage/zephyrproject/zephyr/samples/bluetooth/gatt/cts.c

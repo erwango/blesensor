@@ -46,14 +46,15 @@ Development Guideline
 All ST BLE Sensor Services UUID:
 --------------------------------
 
-/*
-** Feature services
-*/
+
+* Bases service UUID
+
 static struct bt_uuid_128 feature_service_uuid = BT_UUID_INIT_128(
 	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0xb4, 0x9a,
 	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00);
 
-/* Base feature */
+
+* Base feature UUIDs
 
 static struct bt_uuid_128 environmental_uuid = BT_UUID_INIT_128(
 	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
@@ -187,36 +188,36 @@ static struct bt_uuid_128 pedometer_uuid = BT_UUID_INIT_128(
 	0xe1, 0x11, 0x01, 0x00, 0x10, 0x00, 0x00, 0x00);
 
 
-/*
-** Debug service
-*/
+* Debug service UUID
+
 static struct bt_uuid_128 debug_service_uuid = BT_UUID_INIT_128(
 	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0xb4, 0x9a,
 	0xe1, 0x11, 0x0e, 0x00, 0x00, 0x00, 0x00, 0x00);
 
-/* Read and write outpout commands characteristic */
+* Debug feature UUIDs
+
 static struct bt_uuid_128 debug_term_uuid = BT_UUID_INIT_128(
 	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
 	0xe1, 0x11, 0x0e, 0x00, 0x01, 0x00, 0x00, 0x00);
 
-/* Error message characteristic */
+* Error message characteristic
 static struct bt_uuid_128 debug_stderr_uuid = BT_UUID_INIT_128(
 	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
 	0xe1, 0x11, 0x0e, 0x00, 0x02, 0x00, 0x00, 0x00);
 
-/*
-** Common config control service
-*/
+
+* Config control service UUID
+
 static struct bt_uuid_128 config_control_service_uuid = BT_UUID_INIT_128(
 	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0xb4, 0x9a,
 	0xe1, 0x11, 0x0f, 0x00, 0x00, 0x00, 0x00, 0x00);
 
-/* Manage register characteristic */
+* Config control feature UUIDs
+
 static struct bt_uuid_128 register_access_uuid = BT_UUID_INIT_128(
 	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
 	0xe1, 0x11, 0x0f, 0x00, 0x01, 0x00, 0x00, 0x00);
 
-/* send command to feature characteristc */
 static struct bt_uuid_128 feature_command_uuid = BT_UUID_INIT_128(
 	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
 	0xe1, 0x11, 0x0f, 0x00, 0x02, 0x00, 0x00, 0x00);
@@ -250,7 +251,7 @@ Adding new services
 Note
 ----
 
-The functions of most services are extremely heavy.
+The update function of most services are extremely heavy.
 So it is easier to import the services libraries by linking them in Zephyr,
 and use the functions they offer than to re-implement them.
 
@@ -259,5 +260,5 @@ https://www.st.com/en/embedded-software/fp-sns-allmems1.html
 It is also on this application that we base ourselves to implement our
 functions.
 
-You can get the ST BLE Application Code Source here (that can help you):
+You can also get the ST BLE Application Code Source here :
 https://github.com/STMicroelectronics/BlueSTSDK_Android/tree/40fdcbf46955a025191589c6cff0e189bb17a2c9/BlueSTSDK

@@ -251,7 +251,7 @@ Adding new services
 Note
 ----
 
-The update function of most services are extremely heavy.
+The update function of most services is extremely heavy.
 So it is easier to import the services libraries by linking them in Zephyr,
 and use the functions they offer than to re-implement them.
 

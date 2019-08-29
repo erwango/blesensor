@@ -23,17 +23,18 @@
 #include <stdio.h>
 #include <sys/util.h>
 
+//Environmental Service AND Feature UUIDs
 static struct bt_uuid_128 feature_service_uuid = BT_UUID_INIT_128(
 	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0xb4, 0x9a,
 	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00);
 static struct bt_uuid_128 env_uuid = BT_UUID_INIT_128(
 	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
 	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0x1c, 0x00);
+
+//BT variable declarations
 static struct bt_gatt_ccc_cfg env_ccc_cfg[BT_GATT_CCC_MAX] = {};
 static u8_t env_update;
 static u8_t indicating;
-u8_t buffer_to_write[256];
-u32_t bytes_to_write;
 static struct bt_gatt_indicate_params ind_params;
 
 
@@ -42,6 +43,7 @@ static void env_ccc_cfg_changed(const struct bt_gatt_attr *attr, u16_t value)
 	env_update = (value == BT_GATT_CCC_INDICATE) ? 1 : 0;
 }
 
+//BT thread indication
 static void indicate_env(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 			u8_t err)
 {
@@ -49,7 +51,7 @@ static void indicate_env(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 	indicating = 0U;
 }
 
-
+//Bluetooth characteristics declaration
 BT_GATT_SERVICE_DEFINE(env_svc,
 	BT_GATT_PRIMARY_SERVICE(&feature_service_uuid),
   BT_GATT_CHARACTERISTIC(&env_uuid.uuid,
@@ -81,60 +83,60 @@ static void update_env(void)
 	}
 
 
-  k_sleep(MSEC_PER_SEC);
+	k_sleep(MSEC_PER_SEC);
 
-  if (sensor_sample_fetch(hts221) < 0) {
-  	printf("HTS221 Sensor sample update error\n");
-  	return;
+	if (sensor_sample_fetch(hts221) < 0) {
+		printf("HTS221 Sensor sample update error\n");
+		return;
+	}
+	if (sensor_sample_fetch(lps25hb) < 0) {
+		printf("LPS25HB Sensor sample update error\n");
+		return;
   }
-  if (sensor_sample_fetch(lps25hb) < 0) {
-  	printf("LPS25HB Sensor sample update error\n");
-  	return;
-  }
 
-  /* Get sensor data */
+	/* Get sensor data */
 
-  sensor_channel_get(hts221, SENSOR_CHAN_AMBIENT_TEMP, &temp);
-  sensor_channel_get(hts221, SENSOR_CHAN_HUMIDITY, &hum);
-  sensor_channel_get(lps25hb, SENSOR_CHAN_PRESS, &press);
+	sensor_channel_get(hts221, SENSOR_CHAN_AMBIENT_TEMP, &temp);
+	sensor_channel_get(hts221, SENSOR_CHAN_HUMIDITY, &hum);
+	sensor_channel_get(lps25hb, SENSOR_CHAN_PRESS, &press);
 
-  /* Display sensor data */
+	/* Display sensor data */
 
-  /* Erase previous */
-  printf("\0033\014");
+	/* Erase previous */
+	printf("\0033\014");
 
-  printf("X-NUCLEO-IKS01A1 sensor dashboard\n\n");
+	printf("X-NUCLEO-IKS01A1 sensor dashboard\n\n");
 
-  /* temperature */
-  printf("HTS221: Temperature: %.1f C\n",
-  			sensor_value_to_double(&temp));
+	/* temperature */
+	printf("HTS221: Temperature: %.1f C\n",
+				sensor_value_to_double(&temp));
 
-  /* humidity */
-  printf("HTS221: Relative Humidity: %.1f%%\n",
-  			sensor_value_to_double(&hum));
+	/* humidity */
+	printf("HTS221: Relative Humidity: %.1f%%\n",
+				sensor_value_to_double(&hum));
 
-  /* pressure */
-  printf("LPS25HB: Pressure:%.1f kpa\n",
-  			sensor_value_to_double(&press));
+	/* pressure */
+	printf("LPS25HB: Pressure:%.1f kpa\n",
+				sensor_value_to_double(&press));
 
 
 	/*Convert to little endian and app format data*/
-	u32_t pr = sys_cpu_to_le32(sensor_value_to_double(&press)*100);
+	u32_t pr = sys_cpu_to_le32(sensor_value_to_double(&press)*1000);
 	u16_t hu = sys_cpu_to_le16(sensor_value_to_double(&hum)*10);
 	u16_t tp = sys_cpu_to_le16(sensor_value_to_double(&temp)*10);
 	u8_t buf_pos;
 
 
-  /* temperature */
-  printf("HTS221: Temperature: %d C\n",
-  			tp);
+	/* temperature */
+	printf("HTS221: Temperature: %d C\n",
+				tp);
 
-  /* humidity */
-  printf("HTS221: Relative Humidity: %d%%\n",
-  			hu);
+	/* humidity */
+	printf("HTS221: Relative Humidity: %d%%\n",
+				hu);
 
-  /* pressure */
-  printf("LPS25HB: Pressure:%d kpa\n",
+	/* pressure */
+	printf("LPS25HB: Pressure:%d kpa\n",
   			pr);
 
 	memcpy(env_buf, &hu, 2);

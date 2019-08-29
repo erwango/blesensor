@@ -12,6 +12,8 @@
 #include <bluetooth/uuid.h>
 #include <bluetooth/gatt.h>
 
+/*It is this service that notifies the user how to use certain serives
+ (quaternions, compass, ...). We implemented it just for that*/
 
 static struct bt_uuid_128 config_control_service_uuid = BT_UUID_INIT_128(
 	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0xb4, 0x9a,
@@ -67,7 +69,6 @@ static void update_command()
 {
 
 }
-
 
 
 void cmd_notify(void)

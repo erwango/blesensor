@@ -10,9 +10,9 @@ target_sources(app PRIVATE
   src/environmental.c
   src/quaternions.c
   src/command.c
-  /home/stuserlogin/stage/zephyrproject/zephyr/samples/bluetooth/gatt/hrs.c
-  /home/stuserlogin/stage/zephyrproject/zephyr/samples/bluetooth/gatt/bas.c
-  /home/stuserlogin/stage/zephyrproject/zephyr/samples/bluetooth/gatt/cts.c
+  src/MotionFX_Manager.c
+
 )
 
 zephyr_library_include_directories($ENV{ZEPHYR_BASE}/samples/bluetooth)
+list(APPEND ZEPHYR_EXTRA_MODULES inc/STM32_MotionFX_Library/Lib/libMotionFX100_CM0P_GCC_ot.a)

@@ -20,23 +20,25 @@
 #include <stdint.h>
 #include <sys/util.h>
 
-#define sampleFreq	512.0f			// sample frequency in Hz
-#define twoKpDef	(2.0f * 0.5f)	// 2 * proportional gain
-#define twoKiDef	(2.0f * 0.0f)	// 2 * integral gain
+//Include MotionFX (Quaternions including Compass) libraries headers
+#include "../inc/STM32_MotionFX_Library/Inc/motion_fx.h"
+#include "../inc/STM32_MotionFX_Library/Inc/motion_fx_cm0p.h"
+#include "MotionFX_Manager.h"
 
+#define FROM_UT50_TO_MGAUSS 500.0f
+#define FROM_MGAUSS_TO_UT50 (0.1f/50.0f)
 
-static float twoKp = twoKpDef;											// 2 * proportional gain (Kp)
-static float twoKi = twoKiDef;											// 2 * integral gain (Ki)
-static float q0 = 1.0f, q1 = 0.0f, q2 = 0.0f; 					// quaternion of sensor
-float q3 = 0.0f; //Euler angle
-static float integralFBx = 0.0f,  integralFBy = 0.0f, integralFBz = 0.0f;	// integral error terms scaled by Ki
+static uint32_t mag_time_stamp = 0;
 
+//Quaternions Service and Feature UUIDs
 static struct bt_uuid_128 feature_service_uuid = BT_UUID_INIT_128(
 	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0xb4, 0x9a,
 	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00);
 static struct bt_uuid_128 quaternions_uuid = BT_UUID_INIT_128(
 	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
 	0xe1, 0x11, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00);
+
+// Quaternions Variable declarations
 static struct bt_gatt_ccc_cfg quat_ccc_cfg[BT_GATT_CCC_MAX] = {};
 static u8_t quat_buf[8];
 static u8_t quat_ind;
@@ -46,11 +48,12 @@ struct sensor_value accel_xyz[3], gyro_xyz[3], magn_xyz[3];
 struct device *lis3mdl;
 struct device *lsm6ds0;
 
-//Compass variables declaration
+//Compass Service UUIDs
 static struct bt_uuid_128 compass_uuid = BT_UUID_INIT_128(
 	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
 	0xe1, 0x11, 0x01, 0x00, 0x40, 0x00, 0x00, 0x00);
 
+//Compass Variable declarations
 static struct bt_gatt_ccc_cfg comp_ccc_cfg[BT_GATT_CCC_MAX] = {};
 static u8_t comp_buf[4];
 static u8_t comp_ind;
@@ -58,18 +61,22 @@ static u8_t indicating2;
 static struct bt_gatt_indicate_params ind_params2;
 
 
-//Function declaration
-static float invSqrt(float x);
-static void genius(float ax, float ay, float az, float mx, float my,
-									 float mz, float gx, float gy, float gz);
-static void error(float ax, float ay, float az, float gx, float gy, float gz);
-static float sqrt(float value);
+// Library Variables declarations
+MFX_MagCal_input_t mag_data_in;
+MFX_MagCal_output_t magOffset;
+static SensorAxes_t quat_axes;
+SensorAxes_t MAG_Offset;
+SensorAxesRaw_t ACC_Value_Raw;
+SensorAxes_t GYR_Value;
+SensorAxes_t MAG_Value;
 
+//Quaternions bluetooth fonctions
 static void quat_ccc_cfg_changed(const struct bt_gatt_attr *attr, u16_t value)
 {
 	quat_ind = (value == BT_GATT_CCC_INDICATE) ? 1 : 0;
 }
 
+//Quaternions thread indication
 static void indicate_quat(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 			u8_t err)
 {
@@ -77,12 +84,13 @@ static void indicate_quat(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 	indicating = 0U;
 }
 
-//Compass blue fonctions
+//Compass bluetooth fonctions
 static void comp_ccc_cfg_changed(const struct bt_gatt_attr *attr, u16_t value)
 {
 	comp_ind = (value == BT_GATT_CCC_INDICATE) ? 1 : 0;
 }
 
+//Compass thread indication
 static void indicate_comp(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 			u8_t err)
 {
@@ -90,9 +98,7 @@ static void indicate_comp(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 	indicating2 = 0U;
 }
 
-
-
-
+//Bluetooth characteristics declaration
 BT_GATT_SERVICE_DEFINE(quat_svc,
 	BT_GATT_PRIMARY_SERVICE(&feature_service_uuid),
   BT_GATT_CHARACTERISTIC(&quaternions_uuid.uuid,
@@ -108,22 +114,7 @@ BT_GATT_SERVICE_DEFINE(quat_svc,
 
 );
 
-static float sqrt(float value)
-{
-	int i;
-	float sqrt = value / 3;
-
-	if (value <= 0) {
-		return 0;
-	}
-
-	for (i = 0; i < 6; i++) {
-		sqrt = (sqrt + value / sqrt) / 2;
-	}
-
-	return sqrt;
-}
-
+//Initialize Quaternions Service
 void init_quat(void){
 
 	lis3mdl = device_get_binding(DT_INST_0_ST_LIS3MDL_MAGN_LABEL);
@@ -137,191 +128,15 @@ void init_quat(void){
 		printf("Could not get LSM6DS0 device\n");
 		return;
 	}
-}
 
-static void genius(float ax, float ay, float az, float mx, float my,
-									 float mz, float gx, float gy, float gz){
-
-	float recipNorm;
-	float q0q0, q0q1, q0q2, q0q3, q1q1, q1q2, q1q3, q2q2, q2q3, q3q3;
-	float hx, hy, bx, bz;
-	float halfvx, halfvy, halfvz, halfwx, halfwy, halfwz;
-	float halfex, halfey, halfez;
-	float qa, qb, qc;
-
-// Use error algorithm (avoids NaN in magnetometer normalisation)
-	if((mx == 0.0f) && (my == 0.0f) && (mz == 0.0f)) {
-		error(gx, gy, gz, ax, ay, az);
-		return;
-	}
-
-	// Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)
-	if(!((ax == 0.0f) && (ay == 0.0f) && (az == 0.0f))) {
-
-		// Normalise accelerometer measurement
-		recipNorm = invSqrt(ax * ax + ay * ay + az * az);
-		ax *= recipNorm;
-		ay *= recipNorm;
-		az *= recipNorm;
-
-		// Normalise magnetometer measurement
-		recipNorm = invSqrt(mx * mx + my * my + mz * mz);
-		mx *= recipNorm;
-		my *= recipNorm;
-		mz *= recipNorm;
-
-		// Auxiliary variables to avoid repeated arithmetic
-		q0q0 = q0 * q0;
-		q0q1 = q0 * q1;
-		q0q2 = q0 * q2;
-		q0q3 = q0 * q3;
-		q1q1 = q1 * q1;
-		q1q2 = q1 * q2;
-		q1q3 = q1 * q3;
-		q2q2 = q2 * q2;
-		q2q3 = q2 * q3;
-		q3q3 = q3 * q3;
-
-		// Reference direction of Earth's magnetic field
-		hx = 2.0f * (mx * (0.5f - q2q2 - q3q3) + my * (q1q2 - q0q3) + mz * (q1q3 + q0q2));
-		hy = 2.0f * (mx * (q1q2 + q0q3) + my * (0.5f - q1q1 - q3q3) + mz * (q2q3 - q0q1));
-		bx = sqrt(hx * hx + hy * hy);
-		bz = 2.0f * (mx * (q1q3 - q0q2) + my * (q2q3 + q0q1) + mz * (0.5f - q1q1 - q2q2));
-
-		// Estimated direction of gravity and magnetic field
-		halfvx = q1q3 - q0q2;
-		halfvy = q0q1 + q2q3;
-		halfvz = q0q0 - 0.5f + q3q3;
-		halfwx = bx * (0.5f - q2q2 - q3q3) + bz * (q1q3 - q0q2);
-		halfwy = bx * (q1q2 - q0q3) + bz * (q0q1 + q2q3);
-		halfwz = bx * (q0q2 + q1q3) + bz * (0.5f - q1q1 - q2q2);
-
-		// Error is sum of cross product between estimated direction and measured direction of field vectors
-		halfex = (ay * halfvz - az * halfvy) + (my * halfwz - mz * halfwy);
-		halfey = (az * halfvx - ax * halfvz) + (mz * halfwx - mx * halfwz);
-		halfez = (ax * halfvy - ay * halfvx) + (mx * halfwy - my * halfwx);
-
-		// Compute and apply integral feedback if enabled
-		if(twoKi > 0.0f) {
-			integralFBx += twoKi * halfex * (1.0f / sampleFreq);	// integral error scaled by Ki
-			integralFBy += twoKi * halfey * (1.0f / sampleFreq);
-			integralFBz += twoKi * halfez * (1.0f / sampleFreq);
-			gx += integralFBx;	// apply integral feedback
-			gy += integralFBy;
-			gz += integralFBz;
-		}
-		else {
-			integralFBx = 0.0f;	// prevent integral windup
-			integralFBy = 0.0f;
-			integralFBz = 0.0f;
-		}
-
-		// Apply proportional feedback
-		gx += twoKp * halfex;
-		gy += twoKp * halfey;
-		gz += twoKp * halfez;
-	}
-
-	// Integrate rate of change of quaternion
-	gx *= (0.5f * (1.0f / sampleFreq));		// pre-multiply common factors
-	gy *= (0.5f * (1.0f / sampleFreq));
-	gz *= (0.5f * (1.0f / sampleFreq));
-	qa = q0;
-	qb = q1;
-	qc = q2;
-	q0 += (-qb * gx - qc * gy - q3 * gz);
-	q1 += (qa * gx + qc * gz - q3 * gy);
-	q2 += (qa * gy - qb * gz + q3 * gx);
-	q3 += (qa * gz + qb * gy - qc * gx);
-
-	// Normalise quaternion
-	recipNorm = invSqrt(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
-	q0 *= recipNorm;
-	q1 *= recipNorm;
-	q2 *= recipNorm;
-	q3 *= recipNorm;
+	//Fonction to initialize the use of MotionFX library function
+	MotionFX_manager_init();
+	MotionFX_manager_start_9X();
 
 }
 
-static void error(float ax, float ay, float az, float gx, float gy, float gz){
 
-	float recipNorm;
-	float halfvx, halfvy, halfvz;
-	float halfex, halfey, halfez;
-	float qa, qb, qc;
-
-	// Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)
-	if(!((ax == 0.0f) && (ay == 0.0f) && (az == 0.0f))) {
-
-		// Normalise accelerometer measurement
-		recipNorm = invSqrt(ax * ax + ay * ay + az * az);
-		ax *= recipNorm;
-		ay *= recipNorm;
-		az *= recipNorm;
-
-		// Estimated direction of gravity and vector perpendicular to magnetic flux
-		halfvx = q1 * q3 - q0 * q2;
-		halfvy = q0 * q1 + q2 * q3;
-		halfvz = q0 * q0 - 0.5f + q3 * q3;
-
-		// Error is sum of cross product between estimated and measured direction of gravity
-		halfex = (ay * halfvz - az * halfvy);
-		halfey = (az * halfvx - ax * halfvz);
-		halfez = (ax * halfvy - ay * halfvx);
-
-		// Compute and apply integral feedback if enabled
-		if(twoKi > 0.0f) {
-			integralFBx += twoKi * halfex * (1.0f / sampleFreq);	// integral error scaled by Ki
-			integralFBy += twoKi * halfey * (1.0f / sampleFreq);
-			integralFBz += twoKi * halfez * (1.0f / sampleFreq);
-			gx += integralFBx;	// apply integral feedback
-			gy += integralFBy;
-			gz += integralFBz;
-		}
-		else {
-			integralFBx = 0.0f;	// prevent integral windup
-			integralFBy = 0.0f;
-			integralFBz = 0.0f;
-		}
-
-		// Apply proportional feedback
-		gx += twoKp * halfex;
-		gy += twoKp * halfey;
-		gz += twoKp * halfez;
-	}
-
-	// Integrate rate of change of quaternion
-	gx *= (0.5f * (1.0f / sampleFreq));		// pre-multiply common factors
-	gy *= (0.5f * (1.0f / sampleFreq));
-	gz *= (0.5f * (1.0f / sampleFreq));
-	qa = q0;
-	qb = q1;
-	qc = q2;
-	q0 += (-qb * gx - qc * gy - q3 * gz);
-	q1 += (qa * gx + qc * gz - q3 * gy);
-	q2 += (qa * gy - qb * gz + q3 * gx);
-	q3 += (qa * gz + qb * gy - qc * gx);
-
-	// Normalise quaternion
-	recipNorm = invSqrt(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
-	q0 *= recipNorm;
-	q1 *= recipNorm;
-	q2 *= recipNorm;
-	q3 *= recipNorm;
-
-}
-
-static float invSqrt(float x) {
-	float halfx = 0.5f * x;
-	float y = x;
-	long i = *(long*)&y;
-	i = 0x5f3759df - (i>>1);
-	y = *(float*)&i;
-	y = y * (1.5f - (halfx * y * y));
-	return y;
-}
-
-
+//Update quaternions including Compass
 static void update_quat(){
 
 	if (sensor_sample_fetch(lis3mdl) < 0) {
@@ -340,27 +155,6 @@ static void update_quat(){
 	sensor_channel_get(lsm6ds0, SENSOR_CHAN_ACCEL_XYZ, accel_xyz);
 	sensor_channel_get(lsm6ds0, SENSOR_CHAN_GYRO_XYZ, gyro_xyz);
 
-	/* magneto data */
-	printf(
-		"LIS3MDL: Magnetic field (gauss): x: %.1f, y: %.1f, z: %.1f\n",
-		sensor_value_to_double(&magn_xyz[0]),
-		sensor_value_to_double(&magn_xyz[1]),
-		sensor_value_to_double(&magn_xyz[2]));
-
-	/* acceleration */
-	printf(
-		"LSM6DS0: Acceleration (m.s-2): x: %.1f, y: %.1f, z: %.1f\n",
-		sensor_value_to_double(&accel_xyz[0]),
-		sensor_value_to_double(&accel_xyz[1]),
-		sensor_value_to_double(&accel_xyz[2]));
-
-	/* gyroscope */
-	printf(
-		"LSM6DS0: Gyroscope: x: %.1f, y: %.1f, z: %.1f\n",
-		sensor_value_to_double(&gyro_xyz[0]),
-		sensor_value_to_double(&gyro_xyz[1]),
-		sensor_value_to_double(&gyro_xyz[2]));
-
 	float m_x = sensor_value_to_double(&magn_xyz[0]);
 	float m_y = sensor_value_to_double(&magn_xyz[1]);
 	float m_z = sensor_value_to_double(&magn_xyz[2]);
@@ -373,44 +167,97 @@ static void update_quat(){
 	float g_y = sensor_value_to_double(&gyro_xyz[1]);
 	float g_z = sensor_value_to_double(&gyro_xyz[2]);
 
-	printf("Quaternions: x: %.1f, y: %.1f, z: %.1f, w: %.1f\n", q0, q1, q2, q3);
-	genius(m_x, m_y, m_z, a_x, a_y, a_z, g_x, g_y, g_z);
+	/* magneto data */
+	printf(
+		"LIS3MDL: Magnetic field (gauss): x: %.1f, y: %.1f, z: %.1f\n",
+		m_x, m_y, m_z);
 
-	printf("Quaternions: x: %.1f, y: %.1f, z: %.1f, w: %.1f\n", q0, q1, q2, q3);
+	/* acceleration */
+	printf(
+		"LSM6DS0: Acceleration (m.s-2): x: %.1f, y: %.1f, z: %.1f\n",
+		a_x, a_y, a_z);
 
-	u16_t qx, qy, qz, w;
+	/* gyroscope */
+	printf(
+		"LSM6DS0: Gyroscope (dps): x: %.3f, y: %.3f, z: %.3f\n",
+		g_x, g_y, g_z);
 
-	if (q3 < 0){
+	// set to mG
+	m_x = m_x * 1000.0;
+	m_y = m_y * 1000.0;
+	m_z = m_z * 1000.0;
 
-		qx = sys_cpu_to_le16(q0 * (-10000));
-		qy = sys_cpu_to_le16(q1 * (-10000));
-		qz = sys_cpu_to_le16(q2 * (-10000));
-		w = sys_cpu_to_le16((360 + q3) * (10000));//Euler angle
+	//Load the mag data to calibrate
+	mag_data_in.mag[0] = m_x * FROM_MGAUSS_TO_UT50;
+	mag_data_in.mag[1] = m_y * FROM_MGAUSS_TO_UT50;
+	mag_data_in.mag[2] = m_z * FROM_MGAUSS_TO_UT50;
+	mag_data_in.time_stamp = mag_time_stamp;
+	mag_time_stamp += SAMPLE_PERIOD;
 
-	}else{
+	//Calibrate the magnetometer
+	MotionFX_manager_MagCal_run(&mag_data_in, &magOffset);
 
-		qx = sys_cpu_to_le16(q0 * 10000);
-		qy = sys_cpu_to_le16(q1 * 10000);
-		qz = sys_cpu_to_le16(q2 * 10000);
-		w = sys_cpu_to_le16(q3 * 10000);//Euler angle
+	/* Control the calibration status */
+	if( (magOffset.cal_quality == MFX_MAGCALOK) ||
+			(magOffset.cal_quality == MFX_MAGCALGOOD) )
+	{
+
+		MAG_Offset.AXIS_X= (int32_t)(magOffset.hi_bias[0] * FROM_UT50_TO_MGAUSS);
+		MAG_Offset.AXIS_Y= (int32_t)(magOffset.hi_bias[1] * FROM_UT50_TO_MGAUSS);
+		MAG_Offset.AXIS_Z= (int32_t)(magOffset.hi_bias[2] * FROM_UT50_TO_MGAUSS);
+
+		/* Disable magnetometer calibration */
+		MotionFX_manager_MagCal_stop(SAMPLE_PERIOD);
 	}
 
+	//Parse mag acc gyr values
+  GYR_Value.AXIS_X = (int16_t)sys_cpu_to_le16(g_x);
+  GYR_Value.AXIS_Y = (int16_t)sys_cpu_to_le16(g_y);
+  GYR_Value.AXIS_Z = (int16_t)sys_cpu_to_le16(g_z);
 
+	ACC_Value_Raw.AXIS_X = (int32_t)sys_cpu_to_le32(a_x);
+  ACC_Value_Raw.AXIS_Y = (int32_t)sys_cpu_to_le32(a_y);
+	ACC_Value_Raw.AXIS_Z = (int32_t)sys_cpu_to_le32(a_z);
 
+	MAG_Value.AXIS_X = (int16_t)sys_cpu_to_le16(m_x);
+	MAG_Value.AXIS_Y  = (int16_t)sys_cpu_to_le16(m_x);
+	MAG_Value.AXIS_Z = (int16_t)sys_cpu_to_le16(m_x);
+
+	//Transform acc gyr mag values to quaternions values
+	MotionFX_manager_run(ACC_Value_Raw, GYR_Value, MAG_Value);
+
+  /* Read the quaternions */
+  MFX_output_t *MotionFX_Engine_Out = MotionFX_manager_getDataOUT();
+
+	// Set the quaternions data in format
+	if(MotionFX_Engine_Out->quaternion_9X[3] < 0){
+		quat_axes.AXIS_X = (int32_t)(MotionFX_Engine_Out->quaternion_9X[0] * (-10000));
+		quat_axes.AXIS_Y = (int32_t)(MotionFX_Engine_Out->quaternion_9X[1] * (-10000));
+		quat_axes.AXIS_Z = (int32_t)(MotionFX_Engine_Out->quaternion_9X[2] * (-10000));
+	} else {
+		quat_axes.AXIS_X = (int32_t)(MotionFX_Engine_Out->quaternion_9X[0] * 10000);
+		quat_axes.AXIS_Y = (int32_t)(MotionFX_Engine_Out->quaternion_9X[1] * 10000);
+		quat_axes.AXIS_Z = (int32_t)(MotionFX_Engine_Out->quaternion_9X[2] * 10000);
+	}
+
+	//Save Quaternions values
 	u8_t buf_pos;
-	memcpy(quat_buf, &qx, 2); //init buf value
+	memcpy(quat_buf, quat_axes.AXIS_X, 2); //init buf value
 	buf_pos = 2U;
-	memcpy(quat_buf+buf_pos, &qx, 2);
+	memcpy(quat_buf+buf_pos, quat_axes.AXIS_X, 2);
 	buf_pos += 2U;
-	memcpy(quat_buf+buf_pos, &qy, 2);
+	memcpy(quat_buf+buf_pos, quat_axes.AXIS_Y, 2);
 	buf_pos += 2U;
-	memcpy(quat_buf+buf_pos, &qz, 2);
-
-	//Compass part
-	memcpy(comp_buf, &w, 2);
-	memcpy(comp_buf+2U, &w, 2);
+	memcpy(quat_buf+buf_pos, quat_axes.AXIS_Z, 2);
 
 
+	//Get Compass Value
+	uint16_t Angle = (uint16_t)trunc(100*MotionFX_Engine_Out->heading_9X);
+	//Save Compass value
+	memcpy(comp_buf, Angle, 2);
+	memcpy(comp_buf+2U, Angle, 2);
+
+	//Send Quaternions buffer
 	ind_params.attr = &quat_svc.attrs[2];
 	ind_params.func = indicate_quat;
 	ind_params.data = &quat_buf;
@@ -419,7 +266,7 @@ static void update_quat(){
 		indicating = 1U;
 	}
 
-	//Compass part
+	//Send Compass buffer
 	ind_params2.attr = &quat_svc.attrs[4];
 	ind_params2.func = indicate_comp;
 	ind_params2.data = &comp_buf;
@@ -430,22 +277,7 @@ static void update_quat(){
 
 }
 
-/*static void update_comp(void){
-
-	printf("w: %.1f\n", &q3);
-	memcpy(comp_buf, &q3, 2);
-	memcpy(comp_buf+2U, &q3, 2);
-
-	ind_params.attr = &quat_svc.attrs[4];
-	ind_params.func = indicate_comp;
-	ind_params.data = &comp_buf;
-	ind_params.len = sizeof(comp_buf);
-	if (bt_gatt_indicate(NULL, &ind_params) == 0) {
-		indicating2 = 1U;
-	}
-}*/
-
-
+// Quaternions thread
 void quat_indicate(void){
 	if (quat_ind){
 		if(indicating){
@@ -457,6 +289,8 @@ void quat_indicate(void){
 	}
 }
 
+
+// Compass thread
 void comp_indicate(void){
 	if (comp_ind){
 		if(indicating2){

@@ -20,7 +20,7 @@ Building and Running
 
 * Download the Project
 * Go into the "app" directory
-* Build it like this : $ west build -b nucleo_wb55rg
+* Build it like this: $ west build -b nucleo_wb55rg
 
 * Set the shield on your board
 * Run the generated build in your board (drag and drop zephyr.bin generated or
@@ -35,15 +35,15 @@ Building and Running
 List of services Available
 **************************
 * Environmental service
-* Quaternions service : available but does not works properly
-* E-Compass service : available but does not works properly
+* Quaternions service: available but does not works properly
+* E-Compass service: available but does not works properly
 
 
 Development Guideline
 *********************
 
 --------------------------------
-All ST BLE Sensor Services UUID:
+Some ST BLE Sensor Services UUID:
 --------------------------------
 
 
@@ -58,7 +58,7 @@ static struct bt_uuid_128 feature_service_uuid = BT_UUID_INIT_128(
 
 static struct bt_uuid_128 environmental_uuid = BT_UUID_INIT_128(
 	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
-	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0x10, 0x00);
+	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00);
 
 static struct bt_uuid_128 acc_gyro_mag_uuid = BT_UUID_INIT_128(
 	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
@@ -255,10 +255,10 @@ The update function of most services is extremely heavy.
 So it is easier to import the services libraries by linking them in Zephyr,
 and use the functions they offer than to re-implement them.
 
-You can find the service libraries in ST FP-SNS-ALLMEMS1 application :
+You can find the service libraries in ST FP-SNS-ALLMEMS1 application:
 https://www.st.com/en/embedded-software/fp-sns-allmems1.html
 It is also on this application that we base ourselves to implement our
 functions.
 
-You can also get the ST BLE Application Code Source here :
+You can also get the ST BLE Application Code Source here:
 https://github.com/STMicroelectronics/BlueSTSDK_Android/tree/40fdcbf46955a025191589c6cff0e189bb17a2c9/BlueSTSDK

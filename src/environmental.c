@@ -63,7 +63,6 @@ BT_GATT_SERVICE_DEFINE(env_svc,
 );
 
 
-//static void update_env(struct bt_conn *conn, const struct bt_gatt_attr *chrc,u8_t *env_buf)
 static void update_env(void)
 {
 	struct sensor_value temp, hum, press;
@@ -127,25 +126,13 @@ static void update_env(void)
 	u8_t buf_pos;
 
 
-	/* temperature */
-	printf("HTS221: Temperature: %d C\n",
-				tp);
-
-	/* humidity */
-	printf("HTS221: Relative Humidity: %d%%\n",
-				hu);
-
-	/* pressure */
-	printf("LPS25HB: Pressure:%d kpa\n",
-  			pr);
-
 	memcpy(env_buf, &hu, 2);
 	buf_pos = 2U;
 	memcpy(env_buf+buf_pos, &pr, 4);
 	buf_pos += 4U;
-  memcpy(env_buf+buf_pos, &hu, 2);
+	memcpy(env_buf+buf_pos, &hu, 2);
 	buf_pos += 2U;
-  memcpy(env_buf+buf_pos, &tp, 2);
+	memcpy(env_buf+buf_pos, &tp, 2);
 
 	ind_params.attr = &env_svc.attrs[2];
 	ind_params.func = indicate_env;

@@ -229,7 +229,7 @@ Adding new services
 
 * Copy an existing service file (environmental.c for example)
 
-* Do the appropriate change (You can compare two implemented services and see
+* Make the appropriate change (You can compare two implemented services and see
   what changes):
   * replace the services uuid
   * replace BT Characteristics:

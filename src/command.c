@@ -65,10 +65,6 @@ BT_GATT_SERVICE_DEFINE(cmd_svc,
   BT_GATT_CCC(cmd_ccc_cfg, cmd_ccc_cfg_changed),
 );
 
-static void update_command()
-{
-
-}
 
 
 void cmd_notify(void)

@@ -108,11 +108,11 @@ static void update_env(void)
 
 	/* temperature */
 	printf("HTS221: Temperature: %.1f C\n",
-				sensor_value_to_double(&temp));
+		sensor_value_to_double(&temp));
 
 	/* humidity */
 	printf("HTS221: Relative Humidity: %.1f%%\n",
-				sensor_value_to_double(&hum));
+		sensor_value_to_double(&hum));
 
 	/* pressure */
 	printf("LPS25HB: Pressure:%.1f kpa\n",

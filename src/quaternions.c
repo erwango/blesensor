@@ -20,7 +20,7 @@
 	#include <stdint.h>
 	#include <sys/util.h>
 
-	// Update quaternions variables
+	// Update quaternion variables
 	#define sampleFreq	512.0f			// sample frequency in Hz
 	#define twoKpDef	(2.0f * 0.5f)	// 2 * proportional gain
 	#define twoKiDef	(2.0f * 0.0f)	// 2 * integral gain
@@ -31,7 +31,10 @@
 	float q3 = 0.0f; //Euler angle
 	static float integralFBx = 0.0f,  integralFBy = 0.0f, integralFBz = 0.0f;	// integral error terms scaled by Ki
 
-	//Function declaration
+	/*
+	Update Quaternion Function declarations
+	These functions can be replaced by imported library functions
+	*/
 	static float invSqrt(float x);
 	static void genius(float ax, float ay, float az, float mx, float my,
 										 float mz, float gx, float gy, float gz);
@@ -101,14 +104,14 @@
 	BT_GATT_SERVICE_DEFINE(quat_svc,
 		BT_GATT_PRIMARY_SERVICE(&feature_service_uuid),
 	  BT_GATT_CHARACTERISTIC(&quaternions_uuid.uuid,
-							 BT_GATT_CHRC_INDICATE,
-							 BT_GATT_PERM_NONE,
-							 NULL, NULL, NULL),
+			BT_GATT_CHRC_INDICATE,
+			BT_GATT_PERM_NONE,
+			NULL, NULL, NULL),
 	  BT_GATT_CCC(quat_ccc_cfg, quat_ccc_cfg_changed),
 	  BT_GATT_CHARACTERISTIC(&compass_uuid.uuid,
-							 BT_GATT_CHRC_INDICATE,
-							 BT_GATT_PERM_NONE,
-							 NULL, NULL, NULL),
+			BT_GATT_CHRC_INDICATE,
+			BT_GATT_PERM_NONE,
+			NULL, NULL, NULL),
 	  BT_GATT_CCC(comp_ccc_cfg, comp_ccc_cfg_changed),
 
 	);
@@ -376,17 +379,27 @@
 			"LSM6DS0: Gyroscope (dps): x: %.3f, y: %.3f, z: %.3f\n",
 			g_x, g_y, g_z);
 
+		//Take acc gyr & mag data to obtain quaternions data
 		genius(a_x, a_y, a_z, m_x, m_y, m_z, g_x, g_y, g_z);
 		printf("Quaternions: x: %.1f, y: %.1f, z: %.1f, w: %.1f\n", q0, q1, q2, q3);
 
 
 		u8_t buf_pos;
 
-		static u16_t q_x, q_y, q_z, w;
+		static u16_t q_x, q_y, q_z, w, dummy;
+
+		//Convert to app format data
 		q_x = sys_cpu_to_le16(q0 * 10000);
 		q_y = sys_cpu_to_le16(q1 * 10000);
 		q_z = sys_cpu_to_le16(q2 * 10000);
 
+		/*
+		Angle range : -180° to 180°;
+
+		ST BLE Sensor Angle range : 0 to 360°
+		Positif Angle 0° to 180°
+		Negatif Angle 180° to 360°
+		*/
 		if (q3<0){
 			w = sys_cpu_to_le16((1 - q3) * 180 * 100);//Euler angle
 		}
@@ -395,7 +408,7 @@
 		}
 
 
-		memcpy(quat_buf, &q_x , 2); //init buf value
+		memcpy(quat_buf, &dummy , 2); //init buf value
 		buf_pos = 2U;
 		memcpy(quat_buf+buf_pos, &q_x, 2);
 		buf_pos += 2U;

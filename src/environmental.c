@@ -55,14 +55,14 @@ static void indicate_env(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 BT_GATT_SERVICE_DEFINE(env_svc,
 	BT_GATT_PRIMARY_SERVICE(&feature_service_uuid),
   BT_GATT_CHARACTERISTIC(&env_uuid.uuid,
-						 BT_GATT_CHRC_INDICATE,
-						 BT_GATT_PERM_NONE,
-						 NULL, NULL, NULL),
+		BT_GATT_CHRC_INDICATE,
+		BT_GATT_PERM_NONE,
+		NULL, NULL, NULL),
   BT_GATT_CCC(env_ccc_cfg, env_ccc_cfg_changed),
 
 );
 
-
+//Update environmental values
 static void update_env(void)
 {
 	struct sensor_value temp, hum, press;
@@ -124,9 +124,10 @@ static void update_env(void)
 	u16_t hu = sys_cpu_to_le16(sensor_value_to_double(&hum)*10);
 	u16_t tp = sys_cpu_to_le16(sensor_value_to_double(&temp)*10);
 	u8_t buf_pos;
+	static u16_t dummy;
 
 
-	memcpy(env_buf, &hu, 2);
+	memcpy(env_buf, &dummy, 2); //Init buffer
 	buf_pos = 2U;
 	memcpy(env_buf+buf_pos, &pr, 4);
 	buf_pos += 4U;
@@ -134,6 +135,7 @@ static void update_env(void)
 	buf_pos += 2U;
 	memcpy(env_buf+buf_pos, &tp, 2);
 
+	//Send Environmetal data
 	ind_params.attr = &env_svc.attrs[2];
 	ind_params.func = indicate_env;
 	ind_params.data = &env_buf;
@@ -144,6 +146,7 @@ static void update_env(void)
 
 }
 
+//Enviromental thread
 void env_indicate(void){
 	if (env_update){
 		if(indicating){

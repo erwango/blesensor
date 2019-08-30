@@ -35,8 +35,8 @@ Building and Running
 List of services Available
 **************************
 * Environmental service
-* Quaternions service: available but does not works properly
-* E-Compass service: available but does not works properly
+* Quaternions service: works with random values
+* E-Compass service: works with random values
 
 
 Development Guideline

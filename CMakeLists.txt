@@ -8,7 +8,7 @@ project(blesensor)
 target_sources(app PRIVATE
   src/main.c
   src/environmental.c
-  src/quaternions.c
+#  src/quaternions.c
   src/command.c
 
 )

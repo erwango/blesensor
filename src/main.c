@@ -130,14 +130,14 @@ void main(void)
 	bt_conn_cb_register(&conn_callbacks);
 	bt_conn_auth_cb_register(&auth_cb_display);
 
-	init_quat();
+	// init_quat();
 
 	//Set all service threads here
 	while(1){
 
 		env_indicate();
-		quat_indicate();
-		comp_indicate();
+		// quat_indicate();
+		// comp_indicate();
 
 	}
 

@@ -50,7 +50,6 @@ static struct bt_uuid_128 quaternions_uuid = BT_UUID_INIT_128(
 	0xe1, 0x11, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00);
 
 // Quaternions Variable declarations
-static struct bt_gatt_ccc_cfg quat_ccc_cfg[BT_GATT_CCC_MAX] = {};
 static u8_t quat_buf[8];
 static u8_t quat_ind;
 static u8_t indicating;
@@ -66,7 +65,6 @@ static struct bt_uuid_128 compass_uuid = BT_UUID_INIT_128(
 	0xe1, 0x11, 0x01, 0x00, 0x40, 0x00, 0x00, 0x00);
 
 //Compass Variable declarations
-static struct bt_gatt_ccc_cfg comp_ccc_cfg[BT_GATT_CCC_MAX] = {};
 static u8_t comp_buf[4];
 static u8_t comp_ind;
 static u8_t indicating2;
@@ -107,12 +105,12 @@ BT_GATT_SERVICE_DEFINE(quat_svc,
 		BT_GATT_CHRC_INDICATE,
 		BT_GATT_PERM_NONE,
 		NULL, NULL, NULL),
-	BT_GATT_CCC(quat_ccc_cfg, quat_ccc_cfg_changed),
+	BT_GATT_CCC(quat_ccc_cfg_changed),
 	BT_GATT_CHARACTERISTIC(&compass_uuid.uuid,
 		BT_GATT_CHRC_INDICATE,
 		BT_GATT_PERM_NONE,
 		NULL, NULL, NULL),
-	BT_GATT_CCC(comp_ccc_cfg, comp_ccc_cfg_changed),
+	BT_GATT_CCC(comp_ccc_cfg_changed),
 
 );
 

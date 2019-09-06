@@ -21,7 +21,6 @@ static struct bt_uuid_128 config_control_service_uuid = BT_UUID_INIT_128(
 static struct bt_uuid_128 feature_command_uuid = BT_UUID_INIT_128(
 	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0x36, 0xac,
 	0xe1, 0x11, 0x0f, 0x00, 0x02, 0x00, 0x00, 0x00);
-static struct bt_gatt_ccc_cfg cmd_ccc_cfg[BT_GATT_CCC_MAX] = {};
 static u8_t cmd;
 static u8_t cmd_update;
 
@@ -62,7 +61,7 @@ BT_GATT_SERVICE_DEFINE(cmd_svc,
 		BT_GATT_PERM_WRITE, NULL,
 		write_without_rsp_cmd,
 		&cmd),
-  BT_GATT_CCC(cmd_ccc_cfg, cmd_ccc_cfg_changed),
+  BT_GATT_CCC(cmd_ccc_cfg_changed),
 );
 
 

@@ -14,9 +14,9 @@
 #include <bluetooth/uuid.h>
 #include <bluetooth/gatt.h>
 
-#include <gatt/hrs.h>
-#include <gatt/bas.h>
-#include <gatt/cts.h>
+#include <bluetooth/services/hrs.h>
+#include <bluetooth/services/bas.h>
+// #include <bluetooth/services/cts.h>
 
 #include <device.h>
 #include <drivers/sensor.h>
@@ -32,7 +32,6 @@ static struct bt_uuid_128 env_uuid = BT_UUID_INIT_128(
 	0xe1, 0x11, 0x01, 0x00, 0x00, 0x00, 0x1c, 0x00);
 
 //BT variable declarations
-static struct bt_gatt_ccc_cfg env_ccc_cfg[BT_GATT_CCC_MAX] = {};
 static u8_t env_update;
 static u8_t indicating;
 static struct bt_gatt_indicate_params ind_params;
@@ -58,7 +57,7 @@ BT_GATT_SERVICE_DEFINE(env_svc,
 		BT_GATT_CHRC_INDICATE,
 		BT_GATT_PERM_NONE,
 		NULL, NULL, NULL),
-  BT_GATT_CCC(env_ccc_cfg, env_ccc_cfg_changed),
+  BT_GATT_CCC(env_ccc_cfg_changed),
 
 );
 

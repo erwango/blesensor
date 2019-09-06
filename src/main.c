@@ -15,9 +15,8 @@
 #include <bluetooth/uuid.h>
 #include <bluetooth/gatt.h>
 
-#include <gatt/hrs.h>
-#include <gatt/bas.h>
-#include <gatt/cts.h>
+#include <bluetooth/services/hrs.h>
+#include <bluetooth/services/bas.h>
 
 #include <device.h>
 #include <drivers/sensor.h>
@@ -37,12 +36,10 @@ static uint8_t manuf_data[] = {
 
 //BT Data to establish the connexion with the phone
 static const struct bt_data ad[] = {
-
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
 	BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN),
 	BT_DATA_BYTES(BT_DATA_TX_POWER, 0x00),
 	BT_DATA(BT_DATA_MANUFACTURER_DATA, manuf_data, 12),
-
 };
 
 

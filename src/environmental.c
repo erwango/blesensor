@@ -23,6 +23,12 @@
 #include <stdio.h>
 #include <sys/util.h>
 
+#ifdef CONFIG_BOARD_DISCO_L475_IOT1
+#define PRESSURE_SENSOR_LABEL DT_INST_0_ST_LPS22HB_PRESS_LABEL
+#else
+#define PRESSURE_SENSOR_LABEL DT_INST_0_ST_LPS25HB_PRESS_LABEL
+#endif
+
 //Environmental Service AND Feature UUIDs
 static struct bt_uuid_128 feature_service_uuid = BT_UUID_INIT_128(
 	0x1b, 0xc5, 0xd5, 0xa5, 0x02, 0x00, 0xb4, 0x9a,
@@ -66,7 +72,7 @@ static void update_env(void)
 {
 	struct sensor_value temp, hum, press;
 	struct device *hts221 = device_get_binding(DT_INST_0_ST_HTS221_LABEL);
-	struct device *lps25hb = device_get_binding(DT_INST_0_ST_LPS25HB_PRESS_LABEL);
+	struct device *lps25hb = device_get_binding(PRESSURE_SENSOR_LABEL);
 
 	static u8_t env_buf[10];
 
